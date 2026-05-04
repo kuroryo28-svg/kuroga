@@ -159,17 +159,18 @@ const input={targetX:null,targetY:null};
 let shootCooldown=0,dockBtnPressed=false;
 const activeTouches={};
 function handleTouchStart(e){
+// overlay・名前入力・ランキング表示中はゲームのタッチを横取りしない
+if(state===‘title’||state===‘gameover’||state===‘nameentry’||state===‘hsview’){return;}
 e.preventDefault();
-if(state===‘title’||state===‘gameover’){unlockAudio();startGame();return;}
-if(state===‘nameentry’||state===‘hsview’) return; // 名前入力・ランキング表示中はタッチ無効
-// エンディング中はタップ無効（自動ループ）
 for(const t of e.changedTouches){activeTouches[t.identifier]={x:t.clientX,y:t.clientY};input.targetX=t.clientX;input.targetY=t.clientY;fingerDot.style.left=t.clientX+‘px’;fingerDot.style.top=t.clientY+‘px’;fingerDot.style.display=‘block’;}
 }
 function handleTouchMove(e){
+if(state===‘title’||state===‘gameover’||state===‘nameentry’||state===‘hsview’) return;
 e.preventDefault();
 for(const t of e.changedTouches){if(!activeTouches[t.identifier])continue;activeTouches[t.identifier]={x:t.clientX,y:t.clientY};input.targetX=t.clientX;input.targetY=t.clientY;fingerDot.style.left=t.clientX+‘px’;fingerDot.style.top=t.clientY+‘px’;}
 }
 function handleTouchEnd(e){
+if(state===‘title’||state===‘gameover’||state===‘nameentry’||state===‘hsview’) return;
 e.preventDefault();
 for(const t of e.changedTouches){delete activeTouches[t.identifier];if(!Object.keys(activeTouches).length){input.targetX=null;input.targetY=null;fingerDot.style.display=‘none’;}else{const last=Object.values(activeTouches).pop();input.targetX=last.x;input.targetY=last.y;}}
 }
