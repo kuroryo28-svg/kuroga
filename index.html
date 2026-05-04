@@ -23,7 +23,7 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;touch-action:no
 /* ── DOCK BUTTON: bottom center ── */
 #dockBtn{display:none;position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px)+36px);transform:translateX(-50%);z-index:20;width:200px;height:68px;border-radius:34px;background:radial-gradient(circle at 40% 35%,#ffdd0099,#ff880044);border:2.5px solid #ffdd00cc;box-shadow:0 0 30px #ffdd0077;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:22px;font-weight:900;letter-spacing:4px;color:#ffdd00;text-shadow:0 0 14px #ffdd00;touch-action:none;pointer-events:all;animation:dockPulse 0.8s ease-in-out infinite;}
 @keyframes dockPulse{0%,100%{box-shadow:0 0 30px #ffdd0077;}50%{box-shadow:0 0 55px #ffdd00cc;}}
-#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;background:#00000088;}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;background:#00000088;cursor:pointer;}
 #overlay h1{font-size:clamp(28px,8vw,44px);font-weight:900;letter-spacing:4px;color:#00ffcc;text-shadow:0 0 20px #00ffcc,0 0 50px #00ffcc66;text-align:center;animation:pulse 2s ease-in-out infinite;}
 .tap-start{margin-top:6px;padding:14px 36px;border:1.5px solid #00ffcc88;border-radius:50px;color:#00ffcc;font-size:14px;letter-spacing:4px;background:#00ffcc11;pointer-events:all;animation:pulse 1.5s ease-in-out infinite;cursor:pointer;}
 #diffMenu{display:flex;flex-direction:column;gap:10px;align-items:center;width:88%;max-width:300px;}
@@ -1558,6 +1558,13 @@ function startIntro(){state=‘intro’;player={x:W/2,y:H-160,w:40,h:40,speed:7,
 
 document.getElementById(‘startBtn’).addEventListener(‘touchstart’,e=>{e.preventDefault();unlockAudio();startGame();},{passive:false});
 document.getElementById(‘startBtn’).addEventListener(‘click’,()=>{unlockAudio();startGame();});
+// overlay全体をタップしても反応するように
+overlay.addEventListener(‘touchstart’,e=>{
+if(state===‘title’||state===‘gameover’){e.preventDefault();unlockAudio();startGame();}
+},{passive:false});
+overlay.addEventListener(‘click’,()=>{
+if(state===‘title’||state===‘gameover’){unlockAudio();startGame();}
+});
 
 resize();
 // 起動時にスコアをプリフェッチ（タイトル表示を速くする）
