@@ -301,17 +301,26 @@ src.start(now+0.2);src.stop(now+2.2);
 let warp={active:false,timer:0,alpha:0};
 
 // ══════════════════════════════════════════════════════════
-// HIGH SCORE SYSTEM — JSONBin (shared global leaderboard)
+// HIGH SCORE SYSTEM — localStorage + JSONBin sync
 // ══════════════════════════════════════════════════════════
 const JSONBIN_KEY=’$2a$10$Cw5WKqrV9bELHF/9zGhI6OwKyq093SJRhYLs/W8vGsomE9OTzAukm’;
-const JSONBIN_BIN_KEY=‘kuroga_bin_id’; // binのIDをlocalStorageに保存
+const JSONBIN_BIN_KEY=‘kuroga_bin_id’;
+const HS_LOCAL=‘kuroga_hiscores’;
 const HS_MAX=8;
-let _cachedScores=null; // 読み込みキャッシュ
+let _cachedScores=null;
 
+// ローカルから即座に読む（ゲームの起動をブロックしない）
+function loadScoresLocal(){
+try{return JSON.parse(localStorage.getItem(HS_LOCAL))||[];}catch(e){return[];}
+}
+function saveScoresLocal(list){
+try{localStorage.setItem(HS_LOCAL,JSON.stringify(list));}catch(e){}
+}
+
+// JSONBinとの同期（バックグラウンドで、失敗しても無視）
 async function getBinId(){
-// 初回: BINを新規作成してIDを保存
 let binId=localStorage.getItem(JSONBIN_BIN_KEY);
-if(binId) return binId;
+if(binId)return binId;
 try{
 const res=await fetch(‘https://api.jsonbin.io/v3/b’,{
 method:‘POST’,
@@ -324,26 +333,27 @@ localStorage.setItem(JSONBIN_BIN_KEY,binId);
 return binId;
 }catch(e){return null;}
 }
-
-async function loadScores(){
-if(_cachedScores) return _cachedScores;
+async function syncFromCloud(){
 try{
 const binId=await getBinId();
-if(!binId) return [];
-const res=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{
-headers:{‘X-Master-Key’:JSONBIN_KEY}
-});
+if(!binId)return;
+const res=await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{headers:{‘X-Master-Key’:JSONBIN_KEY}});
 const data=await res.json();
-_cachedScores=Array.isArray(data.record)?data.record:[];
-return _cachedScores;
-}catch(e){return _cachedScores||[];}
+if(Array.isArray(data.record)&&data.record.length>0){
+// クラウドとローカルをマージして最良のスコアを保持
+const merged=[…loadScoresLocal(),…data.record];
+merged.sort((a,b)=>b.score-a.score);
+const deduped=merged.filter((v,i,a)=>i===a.findIndex(t=>t.name===v.name&&t.score===v.score));
+if(deduped.length>HS_MAX)deduped.length=HS_MAX;
+saveScoresLocal(deduped);
+_cachedScores=deduped;
 }
-
-async function saveScores(list){
-_cachedScores=list;
+}catch(e){}
+}
+async function syncToCloud(list){
 try{
 const binId=await getBinId();
-if(!binId) return;
+if(!binId)return;
 await fetch(`https://api.jsonbin.io/v3/b/${binId}`,{
 method:‘PUT’,
 headers:{‘Content-Type’:‘application/json’,‘X-Master-Key’:JSONBIN_KEY},
@@ -352,17 +362,23 @@ body:JSON.stringify(list)
 }catch(e){}
 }
 
-async function isHighScore(s){
-const list=await loadScores();
-return list.length<HS_MAX||s>list[list.length-1].score;
+// ゲームが使う関数（すべて同期・即座に返る）
+function loadScores(){
+if(_cachedScores)return _cachedScores;
+return loadScoresLocal();
 }
-
-async function insertScore(name,s){
-const list=await loadScores();
+function isHighScore(s){
+const list=loadScores();
+return list.length<HS_MAX||s>(list[list.length-1]?.score||0);
+}
+function insertScore(name,s){
+const list=loadScores();
 list.push({name:name.toUpperCase(),score:s,loop:loopCount+1});
 list.sort((a,b)=>b.score-a.score);
 if(list.length>HS_MAX)list.length=HS_MAX;
-await saveScores(list);
+saveScoresLocal(list);
+_cachedScores=list;
+syncToCloud(list); // バックグラウンドで同期（失敗してもゲームに影響なし）
 return list;
 }
 
@@ -396,23 +412,22 @@ document.getElementById(‘neOk’).addEventListener(‘touchstart’,e=>{e.prev
 
 async function submitName(){
 const name=neGetName();
-// 送信中表示
 document.getElementById(‘neOk’).textContent=‘SAVING…’;
-const list=await insertScore(name,score);
+const list=insertScore(name,score); // 同期で即返る
 neEl.style.display=‘none’;
 document.getElementById(‘neOk’).textContent=‘OK’;
 showHsTable(list,score);
 }
 
 function showNameEntry(){
-state=‘nameentry’; // ゲーム入力をブロック
+state=‘nameentry’;
 neCursor=0;neCurChars=[0,0,0];neRender();
 document.getElementById(‘neScore’).textContent=`SCORE: ${score.toLocaleString()}`;
 neEl.style.display=‘flex’;
 }
 
 function showHsTable(list,newScore){
-state=‘hsview’; // ランキング表示中もブロック
+state=‘hsview’;
 const rows=document.getElementById(‘hsRows’);
 rows.innerHTML=’’;
 if(list.length===0){
@@ -442,24 +457,17 @@ hsEl.addEventListener(‘click’,closeHs);
 },800);
 }
 
-async function checkAndShowHighScore(){
-// ローディング表示
-neEl.style.display=‘none’;hsEl.style.display=‘none’;
-const isHi=await isHighScore(score);
-if(isHi){
+function checkAndShowHighScore(){
+if(isHighScore(score)){
 showNameEntry();
 } else {
-const list=await loadScores();
-showHsTable(list,null);
+showHsTable(loadScores(),null);
 }
 }
 
-// タイトル表示用: トップスコアをキャッシュから取得
-async function getTopScoreHtml(){
-try{
-const list=await loadScores();
-if(list.length>0) return `<div style="font-size:11px;color:#ff880099;letter-spacing:1px;margin-top:4px">BEST: ${list[0].name} ${list[0].score.toLocaleString()}</div>`;
-}catch(e){}
+function getTopScoreHtml(){
+const list=loadScores();
+if(list.length>0)return `<div style="font-size:11px;color:#ff880099;letter-spacing:1px;margin-top:4px">BEST: ${list[0].name} ${list[0].score.toLocaleString()}</div>`;
 return ‘’;
 }
 function sfxBossRevive(){try{const ac=getAudio(),now=ac.currentTime;[110,138,165,220,277,330].forEach((f,i)=>{const o=ac.createOscillator(),g=ac.createGain();o.type=‘sawtooth’;o.frequency.setValueAtTime(f*3,now+i*0.08);o.frequency.exponentialRampToValueAtTime(f,now+i*0.08+0.2);g.gain.setValueAtTime(0.18,now+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,now+i*0.08+0.25);o.connect(g);g.connect(ac.destination);o.start(now+i*0.08);o.stop(now+i*0.08+0.3);});}catch(e){}}
@@ -1540,8 +1548,8 @@ document.addEventListener(‘keyup’,e=>{kbState[e.key]=false;});
 function applyKeyboard(){if(!Object.keys(kbState).length)return;let kx=0,ky=0;if(kbState[‘ArrowLeft’]||kbState[‘a’])kx-=1;if(kbState[‘ArrowRight’]||kbState[‘d’])kx+=1;if(kbState[‘ArrowUp’]||kbState[‘w’])ky-=1;if(kbState[‘ArrowDown’]||kbState[‘s’])ky+=1;if(kx||ky){player.x=Math.max(25,Math.min(W-25,player.x+kx*player.speed));player.y=Math.max(60,Math.min(H-120,player.y+ky*player.speed));}}
 
 // ── Game flow ─────────────────────────────────────────────
-async function showOverlay(title,sub,tap){
-const topHtml=await getTopScoreHtml();
+function showOverlay(title,sub,tap){
+const topHtml=getTopScoreHtml();
 overlay.innerHTML=`<h1>${title}</h1><div style="font-size:18px;color:#00ffcc;letter-spacing:2px">${sub}</div>${topHtml}<div class="tap-start" id="startBtn">${tap}</div>`;
 overlay.style.display=‘flex’;
 document.getElementById(‘startBtn’).addEventListener(‘touchstart’,e=>{e.preventDefault();unlockAudio();startGame();},{passive:false});
@@ -1567,8 +1575,8 @@ if(state===‘title’||state===‘gameover’){unlockAudio();startGame();}
 });
 
 resize();
-// 起動時にスコアをプリフェッチ（タイトル表示を速くする）
-loadScores();
+// バックグラウンドでクラウドと同期（ゲーム起動をブロックしない）
+setTimeout(()=>syncFromCloud(),2000);
 function loop(){update();draw();requestAnimationFrame(loop);}
 loop();
 </script>
