@@ -78,51 +78,53 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;touch-action:no
   </div>
   <div id="fingerDot"></div>
   <div id="dockBtn">DOCK!!</div>
+</div>
 
-  <!-- Name Entry -->
+<!-- これらはgameWrapの外に出す（touch-action:noneの影響を受けないように） -->
 
-  <div id="nameEntry">
-    <h2>HIGH SCORE!</h2>
-    <div class="ne-score" id="neScore"></div>
-    <div class="ne-letters">
-      <div class="ne-letter active" id="nl0">A</div>
-      <div class="ne-letter" id="nl1">A</div>
-      <div class="ne-letter" id="nl2">A</div>
-    </div>
-    <div class="ne-arrows">
-      <div class="ne-arr" id="neUp">▲</div>
-      <div class="ne-arr" id="neDn">▼</div>
-    </div>
-    <div class="ne-row">
-      <div class="ne-nav" id="nePrev">◀ PREV</div>
-      <div class="ne-nav" id="neNext">NEXT ▶</div>
-    </div>
-    <div class="ne-ok" id="neOk">OK</div>
+<!-- Name Entry -->
+
+<div id="nameEntry">
+  <h2>HIGH SCORE!</h2>
+  <div class="ne-score" id="neScore"></div>
+  <div class="ne-letters">
+    <div class="ne-letter active" id="nl0">A</div>
+    <div class="ne-letter" id="nl1">A</div>
+    <div class="ne-letter" id="nl2">A</div>
   </div>
-
-  <!-- High Score Table -->
-
-  <div id="hsTable">
-    <h2>🏆 HIGH SCORES</h2>
-    <div id="hsRows"></div>
-    <div class="hs-tap">TAP TO CONTINUE</div>
+  <div class="ne-arrows">
+    <div class="ne-arr" id="neUp">▲</div>
+    <div class="ne-arr" id="neDn">▼</div>
   </div>
-
-  <div id="overlay">
-    <h1>KUROGA</h1>
-    <div style="font-size:10px;letter-spacing:2px;color:#00ffcc44;text-align:center">ver 3.0</div>
-    <div style="font-size:11px;color:#00ffcc88;text-align:center;line-height:2;letter-spacing:1px">
-      画面をなぞって移動・自動連射<br>パワーアップを取れ！
-    </div>
-    <div style="font-size:11px;color:#ffdd00;letter-spacing:2px">DIFFICULTY</div>
-    <div id="diffMenu">
-      <button class="diff-btn easy" data-diff="easy">EASY <span class="diff-sub">ゆっくり遊ぶ</span></button>
-      <button class="diff-btn normal selected" data-diff="normal">NORMAL <span class="diff-sub">標準的な難易度</span></button>
-      <button class="diff-btn hard" data-diff="hard">HARD <span class="diff-sub">手強い敵たち</span></button>
-      <button class="diff-btn extreme" data-diff="extreme">EXTREME <span class="diff-sub">廃人向け</span></button>
-    </div>
-    <div class="tap-start" id="startBtn">TAP TO START</div>
+  <div class="ne-row">
+    <div class="ne-nav" id="nePrev">◀ PREV</div>
+    <div class="ne-nav" id="neNext">NEXT ▶</div>
   </div>
+  <div class="ne-ok" id="neOk">OK</div>
+</div>
+
+<!-- High Score Table -->
+
+<div id="hsTable">
+  <h2>🏆 HIGH SCORES</h2>
+  <div id="hsRows"></div>
+  <div class="hs-tap">TAP TO CONTINUE</div>
+</div>
+
+<div id="overlay">
+  <h1>KUROGA</h1>
+  <div style="font-size:10px;letter-spacing:2px;color:#00ffcc44;text-align:center">ver 3.0</div>
+  <div style="font-size:11px;color:#00ffcc88;text-align:center;line-height:2;letter-spacing:1px">
+    画面をなぞって移動・自動連射<br>パワーアップを取れ！
+  </div>
+  <div style="font-size:11px;color:#ffdd00;letter-spacing:2px">DIFFICULTY</div>
+  <div id="diffMenu">
+    <button class="diff-btn easy" data-diff="easy">EASY <span class="diff-sub">ゆっくり遊ぶ</span></button>
+    <button class="diff-btn normal selected" data-diff="normal">NORMAL <span class="diff-sub">標準的な難易度</span></button>
+    <button class="diff-btn hard" data-diff="hard">HARD <span class="diff-sub">手強い敵たち</span></button>
+    <button class="diff-btn extreme" data-diff="extreme">EXTREME <span class="diff-sub">廃人向け</span></button>
+  </div>
+  <div class="tap-start" id="startBtn">TAP TO START</div>
 </div>
 <script>
 const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
