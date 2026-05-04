@@ -58,13 +58,6 @@ html,body{width:100%;height:100%;background:#000;overflow:hidden;touch-action:no
     <h1>KUROGA</h1>
     <div style="font-size:10px;color:#00ffcc44;letter-spacing:2px">ver 4.0</div>
     <div style="font-size:11px;color:#00ffcc88;text-align:center;line-height:2;letter-spacing:1px">画面をなぞって移動・自動連射<br>パワーアップを取れ！</div>
-    <div style="font-size:11px;color:#ffdd00;letter-spacing:2px">DIFFICULTY</div>
-    <div id="dm">
-      <button class="db easy" data-d="easy">EASY <span class="ds">ゆっくり遊ぶ</span></button>
-      <button class="db norm sel" data-d="normal">NORMAL <span class="ds">標準的な難易度</span></button>
-      <button class="db hard" data-d="hard">HARD <span class="ds">手強い敵たち</span></button>
-      <button class="db ext" data-d="extreme">EXTREME <span class="ds">廃人向け</span></button>
-    </div>
     <div class="ts" id="startBtn">TAP TO START</div>
   </div>
 </div>
@@ -80,7 +73,44 @@ window.addEventListener('resize',resize);
 function mkStar(){return{x:Math.random()*(W||400),y:Math.random()*(H||800),r:Math.random()*1.5+0.3,sp:Math.random()*0.8+0.2,br:Math.random()};}
 const stars=[];for(let i=0;i<140;i++)stars.push(mkStar());
 
-// ── Difficulty ──
+// ── Difficulty selection drawn on canvas ──
+const DIFFS=[‘easy’,‘normal’,‘hard’,‘extreme’];
+const DLABELS=[‘EASY’,‘NORMAL’,‘HARD’,‘EXTREME’];
+const DSUBS=[‘ゆっくり遊ぶ’,‘標準的な難易度’,‘手強い敵たち’,‘廃人向け’];
+const DCOLS=[’#00ff88’,’#00ffcc’,’#ff8800’,’#ff4466’];
+let diffIdx=1; // default normal
+function getDiffFromIdx(){return DIFFS[diffIdx];}
+
+function drawTitleDiff(){
+const cx=W/2,bh=44,gap=10;
+const total=DIFFS.length*(bh+gap)-gap;
+const startY=H*0.52;
+ctx.textAlign=‘center’;
+ctx.font=`11px Orbitron`;ctx.fillStyle=’#ffdd00’;ctx.shadowColor=’#ffdd00’;ctx.shadowBlur=8;
+ctx.fillText(‘DIFFICULTY’,cx,startY-16);
+DIFFS.forEach((d,i)=>{
+const y=startY+i*(bh+gap);
+const sel=i===diffIdx;
+const col=DCOLS[i];
+ctx.strokeStyle=col;ctx.lineWidth=sel?2.5:1;
+ctx.fillStyle=sel?(col+‘22’):‘transparent’;
+ctx.shadowColor=col;ctx.shadowBlur=sel?15:0;
+ctx.beginPath();ctx.roundRect(cx-130,y,260,bh,10);ctx.fill();ctx.stroke();
+ctx.font=`bold 13px Orbitron`;ctx.fillStyle=col;ctx.shadowBlur=sel?10:3;
+ctx.fillText(DLABELS[i],cx-30,y+bh*0.62);
+ctx.font=`9px Orbitron`;ctx.fillStyle=col+‘99’;ctx.shadowBlur=0;
+ctx.textAlign=‘right’;ctx.fillText(DSUBS[i],cx+120,y+bh*0.62);
+ctx.textAlign=‘center’;
+});
+}
+
+function handleTitleDiffTouch(x,y){
+const cx=W/2,bh=44,gap=10,startY=H*0.52;
+DIFFS.forEach((d,i)=>{
+const by=startY+i*(bh+gap);
+if(x>=cx-130&&x<=cx+130&&y>=by&&y<=by+bh){diffIdx=i;diff=DIFFS[i];}
+});
+}
 const DCFG={
 easy:   {es:0.8,sr:0.0012,bm:0.6,bs:2.5,lv:5,lb:‘EASY’},
 normal: {es:1.0,sr:0.0022,bm:1.0,bs:3.5,lv:3,lb:‘NORMAL’},
@@ -100,9 +130,19 @@ let sCool=0,dockPressed=false;
 const touches={};
 function handleTouchStart(e){
 e.preventDefault();
-if(state===‘title’||state===‘gameover’){unlockAudio();startGame();return;}
+if(state===‘title’){
+// Check if tapping difficulty area
+for(const t of e.changedTouches){handleTitleDiffTouch(t.clientX,t.clientY);}
+// Check if tapping start button area (bottom 20% of screen)
+for(const t of e.changedTouches){
+if(t.clientY>H*0.82){unlockAudio();diff=getDiffFromIdx();startGame();return;}
+}
+return;
+}
+if(state===‘gameover’){unlockAudio();startGame();return;}
 if(state===‘ending’){unlockAudio();nextLoop();return;}
 if(state===‘nameentry’){handleNameTouch(e);return;}
+if(state===‘hsview’){state=‘gameover’;showOverlay(‘GAME OVER’,`SCORE: ${score.toLocaleString()}`,‘TAP TO RETRY’);return;}
 for(const t of e.changedTouches){
 touches[t.identifier]={x:t.clientX,y:t.clientY};
 inp.tx=t.clientX;inp.ty=t.clientY;
@@ -731,7 +771,26 @@ function draw(){
 ctx.clearRect(0,0,W,H);
 for(const s of stars){ctx.globalAlpha=0.3+s.br*0.7;ctx.fillStyle=`hsl(${180+s.br*40},60%,85%)`;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
 ctx.globalAlpha=1;
-if(state===‘title’)return;
+if(state===‘title’){
+// Draw title on canvas, hide HTML overlay
+overlay.style.display=‘none’;
+const cx=W/2;
+ctx.textAlign=‘center’;
+ctx.font=`bold ${Math.round(W*0.14)}px Orbitron`;ctx.fillStyle=’#00ffcc’;ctx.shadowColor=’#00ffcc’;ctx.shadowBlur=30;
+const tp=0.7+0.3*Math.abs(Math.sin(fc*0.04));ctx.globalAlpha=tp;ctx.fillText(‘KUROGA’,cx,H*0.22);ctx.globalAlpha=1;
+ctx.font=`9px Orbitron`;ctx.fillStyle=’#00ffcc33’;ctx.shadowBlur=0;ctx.fillText(‘ver 4.0’,cx,H*0.22+28);
+ctx.font=`11px Orbitron`;ctx.fillStyle=’#00ffcc88’;ctx.shadowBlur=0;
+ctx.fillText(‘画面をなぞって移動・自動連射’,cx,H*0.35);ctx.fillText(‘パワーアップを取れ！’,cx,H*0.35+20);
+drawTitleDiff();
+// TAP TO START
+const sp=0.5+0.5*Math.abs(Math.sin(fc*0.06));
+ctx.save();ctx.globalAlpha=sp;ctx.shadowColor=’#00ffcc’;ctx.shadowBlur=20;
+ctx.strokeStyle=’#00ffcc88’;ctx.lineWidth=1.5;ctx.fillStyle=’#00ffcc11’;
+ctx.beginPath();ctx.roundRect(cx-100,H*0.88-20,200,44,22);ctx.fill();ctx.stroke();
+ctx.font=`bold 14px Orbitron`;ctx.fillStyle=’#00ffcc’;ctx.fillText(‘TAP TO START’,cx,H*0.88+7);
+ctx.restore();
+return;
+}
 if(state===‘bonus’){drawBonus();return;}
 if(state===‘ending’){drawEnding();return;}
 if(state===‘nameentry’){drawNameEntry();return;}
